@@ -25,10 +25,10 @@ class usonic_ss{
   }
   ~usonic_ss(){}
   void detect(int x); //check xem xe đấy đỗ chx (khoảng cách <= bn đấy thì p[x].check=1 và ngược lại)
-  void rotate(usonic_ss ss1); //quay 3 góc và detect() sử dụng hàm detect ở trên 
+  void rotate(); //quay 3 góc và detect() sử dụng hàm detect ở trên 
 };
 
-void usonic_ss:: rotate(usonic_ss ss1); //quay 3 góc và detect() sử dụng hàm detect ở trên
+void usonic_ss:: rotate(); //quay 3 góc và detect() sử dụng hàm detect ở trên
 
 void usonic_ss::detect();
 
