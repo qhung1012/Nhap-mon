@@ -1,0 +1,116 @@
+#include <LiquidCrystal_I2C.h>
+#include <Servo.h>
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+int angle1;
+int angle2;
+int angle3;
+
+typedef struct{
+  char name[10];
+  int check; //bằng 0 nếu ko có xe đỗ và ngược lại
+}p_lot; //kieu du lieu gom cac ô đỗ xe
+p_lot p[3]={{"a1",0},{"a2",0},{"a3",0}};// mảng gồm các chỗ đỗ xe
+
+class usonic_ss{
+  public:
+  Servo sv; // servo ứng với cảm biến đó
+  int id_p_lot[3];// mảng chứa chỉ số của mảng p[] tức là những ô mà cảm biến đấy sẽ detect
+  int echopin;
+  int trigpin;
+  usonic_ss(): id_p_lot{0,1,2}, echopin(7), trigpin(8) {} // không truyền tham số thì mặc định là như này
+  usonic_ss(int id[],int trig, int echo): echopin(echo),trigpin(trig) {
+    for(int i=0;i<3;i++){
+      id_p_lot[i]=id[i];
+    }
+  }
+  ~usonic_ss(){}
+  void detect(int x);
+  void rotate();
+  void attachServo(int pin) { sv.attach(pin); }
+};
+usonic_ss ss; //cam bien tên u1 (vì mình có một cảm biến nên khao báo 1 biến thôi nhiều thì sẽ là mảng)
+
+void setup() {
+  ss.attachServo(9); //pin cua servo ung voi u1
+  pinMode(ss.echopin, INPUT);
+  pinMode(ss.trigpin, OUTPUT);
+  Serial.begin(9600);
+  lcd.init();
+  lcd.backlight();
+}
+
+void loop() {
+  ss.rotate();
+  displayonlcd(p);
+}
+
+void usonic_ss:: detect(int x){
+  digitalWrite(trigpin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigpin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigpin, LOW);
+
+  // Measure the duration of the pulse
+  long duration = pulseIn(echopin, HIGH);
+
+  // Calculate the distance in centimeters
+  float distance = duration * 0.034 / 2;
+
+  // Print the distance on the Serial Monitor
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  if (distance <= 2){ 
+    p[x].check=2;
+    Serial.println(" Da có vat chan cam bien, can di chuyen vat can");
+  }
+  else if(2<distance&&distance<10){
+    p[x].check=1;
+    Serial.println(" Da co xe do o day");
+  }
+  else{
+    p[x].check=0;
+    Serial.println("Bai do con trong");
+  }
+}; 
+
+//quay 3 góc và detect() sử dụng hàm detect ở trên
+void usonic_ss::rotate(){
+    // Quay servo đến góc 60 độ
+  sv.write(60);
+  detect(id_p_lot[0]);
+  delay(1000); // Đợi 1 giây để servo ổn định
+    // Quay servo đến góc 120 độ
+  sv.write(120);
+  detect(id_p_lot[1]);
+  delay(1000); // Đợi 1 giây để servo ổn định
+    // Quay servo đến góc 180 độ
+  sv.write(180);
+  detect(id_p_lot[2]);  
+  delay(1000);
+};
+
+void displayonlcd(p_lot pl[]) {
+  bool con_slot = false;
+  for (int i = 0; i < 3; i++) {
+    if (pl[i].check == 0) {
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print ("Hay do xe vao o: ");
+      lcd.setCursor(0,1);
+      lcd.print (pl[i].name);
+      con_slot = true;
+      break;
+    }
+  }
+  if (con_slot == false) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print ("Da het cho de xe");
+    lcd.setCursor(0,1);
+    lcd.print ("           ");
+  }
+}
